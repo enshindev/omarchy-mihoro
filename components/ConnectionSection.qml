@@ -28,17 +28,24 @@ Column {
   }
 
   Row {
+    id: trafficRow
     width: parent.width
-    spacing: Style.space(18)
+    spacing: Style.space(10)
     opacity: root.live ? 1.0 : 0.45
 
     Speed {
+      width: (trafficRow.width - trafficRow.spacing) / 2
       glyph: "↓"
+      label: "DOWNLOAD"
+      metricColor: Color.accent
       value: Model.formatSpeed(root.service.downSpeed)
     }
 
     Speed {
+      width: (trafficRow.width - trafficRow.spacing) / 2
       glyph: "↑"
+      label: "UPLOAD"
+      metricColor: Color.urgent
       value: Model.formatSpeed(root.service.upSpeed)
     }
   }
@@ -126,6 +133,21 @@ Column {
       width: parent.width
       textColor: root.textColor
       panelFontFamily: root.panelFontFamily
+      label: "TUN"
+      value: {
+        var liveConfig = root.service.liveConfigs
+        if (!liveConfig || liveConfig.tunEnabled === null) return "—"
+        return liveConfig.tunEnabled ? "enabled" : "disabled"
+      }
+      valueColor: root.service.liveConfigs && root.service.liveConfigs.tunEnabled === true
+        ? Color.accent
+        : root.textColor
+    }
+
+    StatRow {
+      width: parent.width
+      textColor: root.textColor
+      panelFontFamily: root.panelFontFamily
       label: "LAN access"
       value: {
         var liveConfig = root.service.liveConfigs
@@ -138,17 +160,40 @@ Column {
   component Speed: Item {
     id: speed
     required property string glyph
+    required property string label
     required property string value
+    required property color metricColor
 
-    implicitWidth: speedText.implicitWidth
-    implicitHeight: speedText.implicitHeight
+    implicitHeight: metricContent.implicitHeight + Style.space(20)
 
-    Text {
-      id: speedText
-      text: speed.glyph + " " + speed.value
-      color: root.textColor
-      font.family: root.panelFontFamily
-      font.pixelSize: Style.font.title
+    Column {
+      id: metricContent
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      anchors.leftMargin: Style.space(8)
+      anchors.rightMargin: Style.space(8)
+      spacing: Style.space(3)
+
+      Text {
+        width: parent.width
+        text: speed.glyph + "  " + speed.label
+        color: root.textColor
+        font.family: root.panelFontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        horizontalAlignment: Text.AlignHCenter
+      }
+
+      Text {
+        width: parent.width
+        text: speed.value
+        color: speed.metricColor
+        font.family: root.panelFontFamily
+        font.pixelSize: Style.font.title
+        font.bold: true
+        horizontalAlignment: Text.AlignHCenter
+      }
     }
   }
 }

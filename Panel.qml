@@ -21,16 +21,18 @@ Panel {
   property bool cursorActive: false
   property int cursorIndex: 0
   property int modeCursor: 0
+  property int panelPage: 1
 
   // One flat list of what the keyboard can reach, rebuilt from the service
   // state. A panel this shallow does not need per-section cursors: the order
   // here is the order on screen.
   readonly property var targets: {
     if (!mihoro.probe.mihoroInstalled) return ["setup"]
-    if (!mihoro.initialized) return ["setup", "url"]
+    if (root.panelPage === 2) return ["update", "edit"]
+    if (!mihoro.initialized) return ["setup"]
     var list = ["power"]
     if (mihoro.canSwitchMode) list.push("mode")
-    list.push("url", "update")
+    list.push("subscription")
     return list
   }
 
@@ -72,12 +74,33 @@ Panel {
     var target = cursorTarget
     if (target === "power") mihoro.toggleService()
     else if (target === "mode") mihoro.setMode(Model.MODES[modeCursor].value)
-    else if (target === "url") subscription.beginEdit()
+    else if (target === "subscription") root.openSubscriptionPage()
+    else if (target === "edit") subscription.beginEdit()
     else if (target === "update") mihoro.updateSubscription()
     else if (target === "setup") {
       if (!mihoro.probe.mihoroInstalled) Quickshell.execDetached(["xdg-open", Model.INSTALL_DOCS_URL])
-      else subscription.beginEdit()
+      else {
+        root.openSubscriptionPage()
+        subscription.beginEdit()
+      }
     }
+  }
+
+  function openSubscriptionPage() {
+    panelPage = 2
+    cursorActive = false
+    cursorIndex = 0
+    if (panelFlick) panelFlick.contentY = 0
+    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+  }
+
+  function leaveSubscriptionPage() {
+    subscription.cancelEdit()
+    panelPage = 1
+    cursorActive = false
+    cursorIndex = 0
+    if (panelFlick) panelFlick.contentY = 0
+    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
   function cycleMode(delta) {
@@ -93,6 +116,8 @@ Panel {
   }
 
   onOpenedChanged: if (opened) {
+    subscription.cancelEdit()
+    panelPage = 1
     cursorActive = false
     cursorIndex = 0
     modeCursor = Model.modeIndex(mihoro.mode)
@@ -154,7 +179,7 @@ Panel {
       Item {
         MihoroIcon {
           anchors.centerIn: parent
-          iconSize: Style.space(11)
+          iconSize: Style.space(12)
           color: button.glyphColor
           badgeColor: Color.urgent
           crossed: !mihoro.active
@@ -192,18 +217,22 @@ Panel {
         root.moveCursor(dx, dy)
       }
       onActivateRequested: if (root.cursorActive) root.activateCursor()
-      onCloseRequested: root.close()
+      onCloseRequested: {
+        if (root.panelPage === 2) root.leaveSubscriptionPage()
+        else root.close()
+      }
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onTextKey: function(text) {
         var key = String(text || "").toLowerCase()
-        if (key === "t") mihoro.toggleService()
-        else if (key === "r") mihoro.refresh()
-        else if (key === "u") mihoro.updateSubscription()
-        else if (key === "e") subscription.beginEdit()
-        else if (key === "m") root.cycleMode(1)
-        else if (key === "1") mihoro.setMode("rule")
-        else if (key === "2") mihoro.setMode("global")
-        else if (key === "3") mihoro.setMode("direct")
+        if (root.panelPage === 2 && key === "u") mihoro.updateSubscription()
+        else if (root.panelPage === 2 && key === "e") subscription.beginEdit()
+        else if (root.panelPage === 1 && key === "t") mihoro.toggleService()
+        else if (root.panelPage === 1 && key === "r") mihoro.refresh()
+        else if (root.panelPage === 1 && key === "s") root.openSubscriptionPage()
+        else if (root.panelPage === 1 && key === "m") root.cycleMode(1)
+        else if (root.panelPage === 1 && key === "1") mihoro.setMode("rule")
+        else if (root.panelPage === 1 && key === "2") mihoro.setMode("global")
+        else if (root.panelPage === 1 && key === "3") mihoro.setMode("direct")
       }
 
       Flickable {
@@ -224,6 +253,7 @@ Panel {
 
           Item {
             id: header
+            visible: root.panelPage === 1
             width: parent.width
             implicitHeight: Math.max(hero.implicitHeight, headerControls.implicitHeight)
 
@@ -286,7 +316,9 @@ Panel {
                 panelFontFamily: root.fontFamily
                 dashboardUrl: root.dashboardUrl
                 canRestart: mihoro.initialized && mihoro.probe.unitLoaded
+                canCopyProxy: mihoro.probe.mihoroInstalled && !mihoro.copyingProxyExport
                 onRestartRequested: mihoro.restartService()
+                onCopyProxyRequested: mihoro.copyProxyExport()
               }
             }
           }
@@ -294,7 +326,7 @@ Panel {
           // One line for whatever the panel most needs to say: what it is
           // doing, what went wrong, or why the proxy is not connected.
           Text {
-            visible: text !== ""
+            visible: root.panelPage === 1 && text !== ""
             width: parent.width
             text: mihoro.actionStatus !== "" ? mihoro.actionStatus
               : (mihoro.lastError !== "" ? mihoro.lastError : mihoro.connection.detail)
@@ -305,23 +337,26 @@ Panel {
           }
 
           SetupCard {
-            visible: !mihoro.probe.mihoroInstalled || !mihoro.initialized
+            visible: root.panelPage === 1 && (!mihoro.probe.mihoroInstalled || !mihoro.initialized)
             width: parent.width
             textColor: root.foreground
             panelFontFamily: root.fontFamily
             stateKey: mihoro.probe.mihoroInstalled ? "not_initialized" : "cli_missing"
             busy: mihoro.busy
             hasCursor: root.cursorTarget === "setup"
-            onAddUrlRequested: subscription.beginEdit()
+            onAddUrlRequested: {
+              root.openSubscriptionPage()
+              subscription.beginEdit()
+            }
           }
 
           PanelSeparator {
-            visible: mihoro.initialized
+            visible: root.panelPage === 1 && mihoro.initialized
             foreground: root.foreground
           }
 
           ModeSection {
-            visible: mihoro.initialized
+            visible: root.panelPage === 1 && mihoro.initialized
             width: parent.width
             textColor: root.foreground
             panelFontFamily: root.fontFamily
@@ -331,6 +366,7 @@ Panel {
             hint: mihoro.modeHint
             cursorIndex: root.cursorTarget === "mode" ? root.modeCursor : -1
             onModeRequested: function(value) { mihoro.setMode(value) }
+            onSubscriptionRequested: root.openSubscriptionPage()
             onChipHovered: function(index, isHovered) {
               if (!isHovered || !mihoro.canSwitchMode) return
               root.cursorActive = true
@@ -340,31 +376,27 @@ Panel {
           }
 
           PanelSeparator {
-            visible: mihoro.initialized
+            visible: root.panelPage === 1 && mihoro.initialized
             foreground: root.foreground
           }
 
           ConnectionSection {
-            visible: mihoro.initialized
+            visible: root.panelPage === 1 && mihoro.initialized
             width: parent.width
             service: mihoro
             textColor: root.foreground
             panelFontFamily: root.fontFamily
           }
 
-          PanelSeparator {
-            visible: mihoro.probe.mihoroInstalled
-            foreground: root.foreground
-          }
-
           SubscriptionSection {
             id: subscription
-            visible: mihoro.probe.mihoroInstalled
+            visible: root.panelPage === 2 && mihoro.probe.mihoroInstalled
             width: parent.width
             service: mihoro
             textColor: root.foreground
             panelFontFamily: root.fontFamily
             cursorTarget: root.cursorTarget
+            onBackRequested: root.leaveSubscriptionPage()
             onUrlCommitted: function(url) { mihoro.setSubscriptionUrl(url) }
             onUpdateRequested: mihoro.updateSubscription()
             onEditingChanged: if (!editing) Qt.callLater(function() { keyCatcher.forceActiveFocus() })

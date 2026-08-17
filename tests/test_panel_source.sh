@@ -45,6 +45,20 @@ grep -Fq 'mihoro.connection.label' Panel.qml
 ! grep -rFq 'mihoro.state' Panel.qml
 ! grep -rEq '\broot\.state\b' Service.qml
 
+# Live traffic is presented as two centered, equally sized metrics with stable
+# semantic colours: green for download and red for upload.
+grep -Fq 'label: "DOWNLOAD"' components/ConnectionSection.qml
+grep -Fq 'label: "UPLOAD"' components/ConnectionSection.qml
+grep -Fq 'metricColor: Color.accent' components/ConnectionSection.qml
+grep -Fq 'metricColor: Color.urgent' components/ConnectionSection.qml
+grep -Fq 'horizontalAlignment: Text.AlignHCenter' components/ConnectionSection.qml
+grep -Fq 'component Speed: Item {' components/ConnectionSection.qml
+grep -Fq 'color: root.textColor' components/ConnectionSection.qml
+! grep -Fq 'color: Qt.rgba(metricColor.r' components/ConnectionSection.qml
+! grep -Eq '#[0-9a-fA-F]{6}' components/ConnectionSection.qml
+grep -Fq 'label: "TUN"' components/ConnectionSection.qml
+grep -Fq 'root.service.liveConfigs.tunEnabled' components/ConnectionSection.qml
+
 # ---- subscriptions --------------------------------------------------------
 
 # URL subscriptions only: one remote config URL, fetched by the CLI.
@@ -54,9 +68,10 @@ grep -Fq 'remote_config_url' MihoroConfig.js
 # subscription the proxy is not using.
 grep -Fq 'writeConfig({ remoteConfigUrl: text }' Service.qml
 
-# Masked by default, with an explicit reveal.
-grep -Fq 'property bool revealed: false' components/SubscriptionSection.qml
-grep -Fq 'Model.displayUrl(root.url, root.revealed)' components/SubscriptionSection.qml
+# The credential is absent from read-only mode; it only enters a control after
+# the user explicitly chooses Edit/Add.
+! grep -Fq 'property bool revealed:' components/SubscriptionSection.qml
+! grep -Fq 'Model.displayUrl(' components/SubscriptionSection.qml
 
 # The write is atomic and keeps the file's permissions — it holds a credential.
 grep -Fq 'mktemp' MihoroConfig.js
@@ -75,6 +90,50 @@ grep -Fq 'ConnectionSection {' Panel.qml
 grep -Fq 'SubscriptionSection {' Panel.qml
 grep -Fq 'SetupCard {' Panel.qml
 grep -Fq 'blocked: subscription.editing' Panel.qml
+grep -Fq 'iconSize: Style.space(12)' Panel.qml
+grep -Fq 'onCopyProxyRequested: mihoro.copyProxyExport()' Panel.qml
+grep -Fq 'text: "Copy proxy export"' components/PanelMenu.qml
+grep -Fq 'https://github.com/huacnlee/omarchy-mihoro' components/PanelMenu.qml
+grep -Fq 'Model.proxyExportCommand()' Service.qml
+grep -Fq 'clipboardProcess.write(root._pendingClipboard)' Service.qml
+grep -Fq 'command: ["wl-copy"]' Service.qml
+
+# The popup is two internal pages, and every fresh open returns to the main
+# controls. Subscription navigation is explicit rather than a collapsible
+# section or an accidental click on the credential display.
+grep -Fq 'property int panelPage: 1' Panel.qml
+grep -Fq 'panelPage = 1' Panel.qml
+grep -Fq 'subscription.cancelEdit()' Panel.qml
+grep -Fq 'visible: root.panelPage === 1' Panel.qml
+grep -Fq 'visible: root.panelPage === 2' Panel.qml
+grep -Fq 'onSubscriptionRequested: root.openSubscriptionPage()' Panel.qml
+grep -Fq 'SettingsIcon {' components/ModeSection.qml
+grep -Fq 'PanelActionButton {' components/ModeSection.qml
+grep -Fq 'id: modeControlRow' components/ModeSection.qml
+grep -Fq 'width: modeControlRow.width - subscriptionButton.width - modeControlRow.spacing' components/ModeSection.qml
+! grep -Fq 'text: "⚙"' components/ModeSection.qml
+grep -Fq 'onBackRequested: root.leaveSubscriptionPage()' Panel.qml
+grep -Fq 'if (root.panelPage === 2) root.leaveSubscriptionPage()' Panel.qml
+
+# Page two owns subscription editing. Read-only mode never renders the URL;
+# only the named Edit/Add action opens the field.
+grep -Fq 'text: "SUBSCRIPTION"' components/SubscriptionSection.qml
+grep -Fq 'text: root.url === "" ? "Add" : "Edit"' components/SubscriptionSection.qml
+grep -Fq 'text: root.updating ? "Updating…" : "Update"' components/SubscriptionSection.qml
+grep -Fq 'text: root.service.probe.configPresent ? "Update" : "Save and set up"' components/SubscriptionSection.qml
+grep -Fq 'QQC.TextArea {' components/SubscriptionSection.qml
+grep -Fq 'wrapMode: TextEdit.WrapAnywhere' components/SubscriptionSection.qml
+! grep -Fq 'QQC.TextField {' components/SubscriptionSection.qml
+! grep -Fq 'text: "Show"' components/SubscriptionSection.qml
+! grep -Fq 'text: "Hide"' components/SubscriptionSection.qml
+grep -Fq 'text: "Last updated " + Model.formatAgo' components/SubscriptionSection.qml
+grep -Fq 'visible: !root.editing && root.service.probe.configPresent' components/SubscriptionSection.qml
+grep -Fq 'id: subscriptionStatus' components/SubscriptionSection.qml
+grep -Fq 'id: subscriptionActions' components/SubscriptionSection.qml
+grep -Fq 'width: (subscriptionActions.width - subscriptionActions.spacing) / 2' components/SubscriptionSection.qml
+grep -Fq 'text: "SUBSCRIPTION URL"' components/SubscriptionSection.qml
+grep -Fq 'id: editorActions' components/SubscriptionSection.qml
+! sed -n '/\/\/ ---- editor/,$p' components/SubscriptionSection.qml | grep -Fq 'TextField {'
 
 # Keyboard: toggle, refresh, update, edit, and the three modes by number.
 grep -Fq 'key === "t"' Panel.qml
@@ -127,6 +186,7 @@ PY
 # anywhere but back into mihoro.toml.
 ! grep -rEq 'console\.(log|warn|error).*(secret|remoteConfigUrl|remote_config_url)' \
   Panel.qml Service.qml components/*.qml Model.js ClashApi.js MihoroConfig.js
-! grep -rFq 'wl-copy' Panel.qml Service.qml components/*.qml
+# Clipboard data is written over stdin, never embedded in a command argument.
+! grep -rEq 'execDetached\(.*wl-copy|bash.*wl-copy' Panel.qml Service.qml components/*.qml
 
 echo "panel source tests passed"

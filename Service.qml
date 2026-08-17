@@ -77,6 +77,7 @@ Item {
   readonly property bool busy: probeProcess.running || configReadProcess.running
     || actionProcess.running || modeProcess.running || configWriteProcess.running
   readonly property bool actionRunning: actionProcess.running
+  readonly property bool copyingProxyExport: proxyExportProcess.running || clipboardProcess.running
 
   signal actionFinished(string kind, bool ok)
 
@@ -168,6 +169,15 @@ Item {
     runAction("update", Model.updateConfigCommand(), "Refreshing subscription…")
   }
 
+  function copyProxyExport() {
+    if (!probe.mihoroInstalled || copyingProxyExport) return
+    _pendingClipboard = ""
+    lastError = ""
+    actionStatus = "Exporting proxy info…"
+    proxyExportProcess.command = Model.proxyExportCommand()
+    proxyExportProcess.running = true
+  }
+
   // Setting the URL and pulling it are one gesture: writing the file alone
   // would leave the panel showing a subscription that nothing has fetched.
   function setSubscriptionUrl(url) {
@@ -198,6 +208,7 @@ Item {
   property string _afterWrite: ""
   property string _actionOutput: ""
   property string _actionError: ""
+  property string _pendingClipboard: ""
 
   function writeConfig(changes, thenAction) {
     if (configWriteProcess.running) return false
@@ -431,6 +442,42 @@ Item {
       // The stream ends whenever mihomo restarts or the network blips. Come
       // back on a delay rather than spinning on a core that is still booting.
       if (root.panelOpen) trafficRetry.restart()
+    }
+  }
+
+  Process {
+    id: proxyExportProcess
+    running: false
+    command: []
+    stdout: SplitParser {
+      onRead: function(line) { root._pendingClipboard += line + "\n" }
+    }
+    onExited: function(exitCode) {
+      if (exitCode !== 0 || root._pendingClipboard.trim() === "") {
+        root._pendingClipboard = ""
+        root.actionStatus = ""
+        root.lastError = "Could not export proxy info."
+        return
+      }
+      clipboardProcess.stdinEnabled = true
+      clipboardProcess.running = true
+    }
+  }
+
+  Process {
+    id: clipboardProcess
+    running: false
+    command: ["wl-copy"]
+    stdinEnabled: false
+    onStarted: {
+      clipboardProcess.write(root._pendingClipboard)
+      root._pendingClipboard = ""
+      clipboardProcess.stdinEnabled = false
+    }
+    onExited: function(exitCode) {
+      root.actionStatus = exitCode === 0 ? "Proxy export copied." : ""
+      root.lastError = exitCode === 0 ? "" : "Could not copy proxy info."
+      if (exitCode === 0) actionStatusTimer.restart()
     }
   }
 

@@ -14,6 +14,7 @@ assert.deepStrictEqual(Array.from(model.applyCommand()), ["mihoro", "apply"])
 assert.deepStrictEqual(Array.from(model.startCommand()), ["mihoro", "start"])
 assert.deepStrictEqual(Array.from(model.stopCommand()), ["mihoro", "stop"])
 assert.deepStrictEqual(Array.from(model.restartCommand()), ["mihoro", "restart"])
+assert.deepStrictEqual(Array.from(model.proxyExportCommand()), ["mihoro", "proxy", "export"])
 
 for (const forbidden of ["uninstall", "upgrade", "install.sh", "curl -fsSL"])
   assert.ok(!JSON.stringify(model.PROBE_SCRIPT).includes(forbidden),
@@ -155,14 +156,16 @@ assert.strictEqual(model.isValidSubscriptionUrl("nope"), false)
 // The token is the credential, so it is hidden whole rather than partially —
 // half a token is still half a token to anyone reading over a shoulder.
 const masked = model.maskUrl("https://sub.example.com/link/AbCdEf123456789?clash=1&token=supersecretvalue")
-assert.ok(masked.startsWith("https://sub.example.com/link/"))
+assert.strictEqual(masked, "https://sub.example.com/*******")
 assert.ok(!masked.includes("AbCdEf123456789"))
 assert.ok(!masked.includes("supersecretvalue"))
-assert.ok(masked.includes("clash=1"), "short, non-secret parameters stay readable")
-assert.ok(masked.includes("token="), "the parameter name still shows what was hidden")
+assert.strictEqual(
+  model.maskUrl("https://panel.example.com/users/api/s/abcdefghijklmnop?token=supersecretvalue"),
+  "https://panel.example.com/*******")
 
-// A short path is not a token and stays legible.
-assert.strictEqual(model.maskUrl("https://example.com/sub"), "https://example.com/sub")
+// Even short paths can identify an account or endpoint, so the entire tail is
+// hidden. Only the origin remains useful for recognizing the provider.
+assert.strictEqual(model.maskUrl("https://example.com/sub"), "https://example.com/*******")
 assert.strictEqual(model.maskUrl(""), "")
 
 assert.strictEqual(model.displayUrl("", false), "No subscription URL yet")

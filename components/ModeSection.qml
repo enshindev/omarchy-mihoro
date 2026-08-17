@@ -23,6 +23,7 @@ Column {
 
   signal modeRequested(string value)
   signal chipHovered(int index, bool isHovered)
+  signal subscriptionRequested()
 
   readonly property var options: Model.MODES.map(function(entry) {
     return { value: entry.value, label: entry.label, tooltip: entry.hint }
@@ -55,23 +56,48 @@ Column {
     }
   }
 
-  ButtonGroup {
-    id: group
+  Row {
+    id: modeControlRow
     width: parent.width
-    options: root.options
-    value: root.mode
-    foreground: root.textColor
-    accent: root.accentColor
-    fontFamily: root.panelFontFamily
-    fontSize: Style.font.bodySmall
-    // The panel drives the cursor; Tab focus would give the group a second,
-    // competing highlight inside a surface that already has one.
-    focusable: false
-    cursorIndex: root.cursorIndex
-    opacity: root.switchable ? 1.0 : 0.45
-    enabled: root.switchable
-    onChanged: function(value) { if (root.switchable) root.modeRequested(value) }
-    onHovered: function(index, isHovered) { root.chipHovered(index, isHovered) }
+    spacing: Style.space(6)
+
+    ButtonGroup {
+      id: group
+      anchors.verticalCenter: parent.verticalCenter
+      width: modeControlRow.width - subscriptionButton.width - modeControlRow.spacing
+      options: root.options
+      value: root.mode
+      foreground: root.textColor
+      accent: root.accentColor
+      fontFamily: root.panelFontFamily
+      fontSize: Style.font.bodySmall
+      // The panel drives the cursor; Tab focus would give the group a second,
+      // competing highlight inside a surface that already has one.
+      focusable: false
+      cursorIndex: root.cursorIndex
+      opacity: root.switchable ? 1.0 : 0.45
+      enabled: root.switchable
+      onChanged: function(value) { if (root.switchable) root.modeRequested(value) }
+      onHovered: function(index, isHovered) { root.chipHovered(index, isHovered) }
+    }
+
+    PanelActionButton {
+      id: subscriptionButton
+      anchors.verticalCenter: parent.verticalCenter
+      foreground: root.textColor
+      hoverColor: root.textColor
+      size: Style.space(26)
+      tooltipText: "Manage subscription"
+      onClicked: root.subscriptionRequested()
+
+      SettingsIcon {
+        anchors.centerIn: parent
+        iconSize: Style.font.body
+        color: subscriptionButton._hot
+          ? subscriptionButton.hoverColor
+          : subscriptionButton.foreground
+      }
+    }
   }
 
   Text {

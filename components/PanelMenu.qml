@@ -14,8 +14,10 @@ Item {
   required property string panelFontFamily
   property string dashboardUrl: ""
   property bool canRestart: false
+  property bool canCopyProxy: false
 
   signal restartRequested()
+  signal copyProxyRequested()
 
   implicitWidth: Style.space(28)
   implicitHeight: Style.space(28)
@@ -59,6 +61,10 @@ Item {
         enabled: root.dashboardUrl !== ""
         onActivated: root.openUrl(root.dashboardUrl)
       }
+      MenuRow {
+        text: "GitHub"
+        onActivated: root.openUrl("https://github.com/huacnlee/omarchy-mihoro")
+      }
       MenuRow { text: "mihoro"; onActivated: root.openUrl("https://github.com/spencerwooo/mihoro") }
       MenuRow { text: "mihomo docs"; onActivated: root.openUrl("https://wiki.metacubex.one") }
 
@@ -70,6 +76,15 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           width: parent.width
           foreground: root.textColor
+        }
+      }
+
+      MenuRow {
+        text: "Copy proxy export"
+        enabled: root.canCopyProxy
+        onActivated: {
+          menu.close()
+          root.copyProxyRequested()
         }
       }
 
