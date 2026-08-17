@@ -62,14 +62,14 @@ else
   ln -s "$project_dir" "$install_path"
 fi
 
-if command -v omarchy-shell >/dev/null 2>&1; then
-  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
-  omarchy plugin enable "$plugin_id" >/dev/null 2>&1 || true
+if $restart_shell; then
+  printf '%s\n' 'Restarting Omarchy shell…'
+  omarchy restart shell
 fi
 
-if $restart_shell; then
-  omarchy restart shell >/dev/null 2>&1 || true
-fi
+printf '%s\n' 'Registering Mihoro in the bar…'
+omarchy-shell shell rescanPlugins
+omarchy plugin enable "$plugin_id"
 
 printf 'Mihoro installed for development at %s\n' "$install_path"
 printf '%s\n' 'Open the panel from the bar. QML edits are read through the symlink.'

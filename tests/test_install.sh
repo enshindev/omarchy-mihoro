@@ -54,3 +54,49 @@ grep -Fq 'plugin-backups' install.sh
 }
 
 echo "install tests passed"
+
+# A failed shell registration must not be reported as a successful install.
+# The plugin files alone cannot produce a bar icon; enable is the operation
+# that adds the widget to the user's bar layout.
+test_root="$(mktemp -d)"
+trap 'rm -rf "$test_root"' EXIT
+mkdir -p "$test_root/bin" "$test_root/config"
+
+cat >"$test_root/bin/omarchy" <<'SH'
+#!/usr/bin/env bash
+if [[ "$1 $2" == "plugin validate" ]]; then
+  exit 0
+elif [[ "$1 $2" == "plugin enable" ]]; then
+  printf '%s\n' 'simulated enable failure' >&2
+  exit 1
+elif [[ "$1 $2" == "restart shell" ]]; then
+  exit 0
+fi
+exit 0
+SH
+chmod +x "$test_root/bin/omarchy"
+
+cat >"$test_root/bin/omarchy-shell" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$test_root/bin/omarchy-shell"
+
+if output="$(PATH="$test_root/bin:/usr/bin:/bin" \
+  XDG_CONFIG_HOME="$test_root/config" \
+  HOME="$test_root/home" \
+  ./install.sh 2>&1)"; then
+  echo "install.sh reported success when plugin enable failed" >&2
+  exit 1
+fi
+
+[[ "$output" == *"simulated enable failure"* ]] || {
+  echo "install.sh hid the plugin enable error" >&2
+  exit 1
+}
+[[ "$output" != *"Mihoro installed"* ]] || {
+  echo "install.sh printed its success message after plugin enable failed" >&2
+  exit 1
+}
+
+echo "install failure handling tests passed"
