@@ -37,6 +37,8 @@ Item {
   property real uploadTotal: 0
   property real upSpeed: 0
   property real downSpeed: 0
+  property var globalProxyOptions: []
+  property string currentGlobalProxy: ""
 
   // ---- in-flight intent
   //
@@ -45,6 +47,8 @@ Item {
   // real state. Waiting for systemd makes the panel feel broken.
   property int desiredActive: -1
   property string pendingMode: ""
+  property string pendingGlobalProxy: ""
+  property bool globalSelectionRequested: false
   property string actionKind: ""
   property string actionStatus: ""
   property string lastError: ""
@@ -75,7 +79,8 @@ Item {
     : (liveConfigs && liveConfigs.mode !== "" ? liveConfigs.mode : config.mode)
 
   readonly property bool busy: probeProcess.running || configReadProcess.running
-    || actionProcess.running || modeProcess.running || configWriteProcess.running
+    || actionProcess.running || modeProcess.running || proxySelectProcess.running
+    || configWriteProcess.running
   readonly property bool actionRunning: actionProcess.running
   readonly property bool copyingProxyExport: proxyExportProcess.running || clipboardProcess.running
 
@@ -115,6 +120,13 @@ Item {
       configsProcess.command = ClashApi.configsCommand(apiBase, config.secret)
       configsProcess.running = true
     }
+    refreshProxies()
+  }
+
+  function refreshProxies() {
+    if (apiBase === "" || !serviceActive || proxiesProcess.running) return
+    proxiesProcess.command = ClashApi.proxiesCommand(apiBase, config.secret)
+    proxiesProcess.running = true
   }
 
   function refreshConnections() {
@@ -138,6 +150,21 @@ Item {
     // with the core; if it does not, the file is what `mihoro apply` reads.
     // A write that could not start takes the optimistic chip back with it.
     if (!writeConfig({ mode: wanted }, apiBase === "" ? "apply" : "mode")) pendingMode = ""
+  }
+
+  function selectGlobalProxy(name) {
+    var wanted = String(name || "")
+    if (wanted === "" || !canSwitchMode || proxySelectProcess.running) return
+    pendingGlobalProxy = wanted
+    globalSelectionRequested = true
+    lastError = ""
+    proxySelectProcess.command = ClashApi.selectProxyCommand(apiBase, config.secret, "GLOBAL", wanted)
+    proxySelectProcess.running = true
+  }
+
+  function cancelGlobalSelection() {
+    globalSelectionRequested = false
+    pendingGlobalProxy = ""
   }
 
   function toggleService() {
@@ -336,6 +363,7 @@ Item {
       if (versionProcess.running) versionProcess.running = false
       if (configsProcess.running) configsProcess.running = false
       if (connectionsProcess.running) connectionsProcess.running = false
+      if (proxiesProcess.running) proxiesProcess.running = false
     }
   }
 
@@ -421,6 +449,51 @@ Item {
       root.connectionCount = parsed.count
       root.downloadTotal = parsed.downloadTotal
       root.uploadTotal = parsed.uploadTotal
+    }
+  }
+
+  Process {
+    id: proxiesProcess
+    running: false
+    command: []
+    stdout: StdioCollector { id: proxiesOut; waitForEnd: true }
+    stderr: StdioCollector { id: proxiesErr; waitForEnd: true }
+    onExited: function(exitCode) {
+      var result = ClashApi.classify(exitCode, proxiesOut.text, proxiesErr.text)
+      if (!result.ok) return
+      var parsed = ClashApi.parseGlobalProxies(result.body)
+      if (!parsed) return
+      root.globalProxyOptions = parsed.options
+      root.currentGlobalProxy = parsed.current
+    }
+  }
+
+  Process {
+    id: proxySelectProcess
+    running: false
+    command: []
+    stdout: StdioCollector { id: proxySelectOut; waitForEnd: true }
+    stderr: StdioCollector { id: proxySelectErr; waitForEnd: true }
+    onExited: function(exitCode) {
+      var result = ClashApi.classify(exitCode, proxySelectOut.text, proxySelectErr.text)
+      if (!result.ok) {
+        root.cancelGlobalSelection()
+        root.lastError = result.message
+        return
+      }
+      var selected = root.pendingGlobalProxy
+      var activateGlobal = root.globalSelectionRequested
+      if (selected !== "") root.currentGlobalProxy = selected
+      root.pendingGlobalProxy = ""
+      root.globalSelectionRequested = false
+      if (activateGlobal && root.mode !== "global") root.setMode("global")
+      else {
+        if (activateGlobal) {
+          root.actionStatus = "Global connection selected."
+          actionStatusTimer.restart()
+        }
+      }
+      root.refreshProxies()
     }
   }
 

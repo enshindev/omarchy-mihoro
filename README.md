@@ -3,7 +3,7 @@
 An Omarchy bar panel for [mihoro](https://github.com/spencerwooo/mihoro), the
 Mihomo CLI client for Linux.
 
-<img width="400" alt="Mihoro panel" src="https://github.com/user-attachments/assets/ca5a27d9-a05e-4134-8cae-360ddef861d8" />
+<img width="400" alt="Mihoro panel" src="https://github.com/user-attachments/assets/828033d7-930b-4e66-8a7a-8d968240b8c3" />
 
 Use it to monitor your proxy, switch between Rule, Global, and Direct modes,
 and manage your subscription.

@@ -2,6 +2,7 @@ QMLLINT := /usr/lib/qt6/bin/qmllint
 QML_FILES := Panel.qml Service.qml \
 	components/MihoroIcon.qml \
 	components/SettingsIcon.qml \
+	components/ServiceSwitch.qml \
 	components/StatRow.qml \
 	components/ModeSection.qml \
 	components/ConnectionSection.qml \

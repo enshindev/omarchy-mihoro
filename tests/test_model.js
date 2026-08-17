@@ -214,4 +214,12 @@ assert.strictEqual(model.modeIndex("direct"), 2)
 assert.strictEqual(model.modeIndex("nope"), 0)
 assert.strictEqual(model.MODES.length, 3)
 
+// Global needs a concrete outbound before it can be enabled; the other modes
+// are complete choices by themselves.
+assert.strictEqual(model.modeSelectionAction("global", "rule"), "choose_proxy")
+assert.strictEqual(model.modeSelectionAction("global", "global"), "choose_proxy")
+assert.strictEqual(model.modeSelectionAction("direct", "rule"), "switch")
+assert.strictEqual(model.modeSelectionAction("rule", "rule"), "none")
+assert.strictEqual(model.modeSelectionAction("sideways", "rule"), "none")
+
 console.log("model tests passed")

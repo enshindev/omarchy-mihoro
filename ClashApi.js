@@ -81,6 +81,7 @@ function getCommand(base, secret, path) {
 function versionCommand(base, secret) { return getCommand(base, secret, "/version") }
 function configsCommand(base, secret) { return getCommand(base, secret, "/configs") }
 function connectionsCommand(base, secret) { return getCommand(base, secret, "/connections") }
+function proxiesCommand(base, secret) { return getCommand(base, secret, "/proxies") }
 
 function setModeCommand(base, secret, mode) {
   return ["curl", "-sS", "--max-time", TIMEOUT_SECONDS, "-w", "\\n%{http_code}",
@@ -88,6 +89,14 @@ function setModeCommand(base, secret, mode) {
           "-d", JSON.stringify({ mode: normalizeMode(mode) || "rule" })]
     .concat(authArgs(secret))
     .concat([String(base) + "/configs"])
+}
+
+function selectProxyCommand(base, secret, group, name) {
+  return ["curl", "-sS", "--max-time", TIMEOUT_SECONDS, "-w", "\\n%{http_code}",
+          "-X", "PUT", "-H", "Content-Type: application/json",
+          "-d", JSON.stringify({ name: String(name || "") })]
+    .concat(authArgs(secret))
+    .concat([String(base) + "/proxies/" + encodeURIComponent(String(group || ""))])
 }
 
 // `/traffic` pushes one JSON object per second for as long as the socket is
@@ -187,6 +196,20 @@ function parseConnections(body) {
     uploadTotal: Number(payload.uploadTotal) || 0,
     memory: Number(payload.memory) || 0
   }
+}
+
+function parseGlobalProxies(body) {
+  var payload = parseJson(body)
+  if (!payload) return null
+  var proxies = payload.proxies
+  var group = proxies && typeof proxies === "object" ? proxies.GLOBAL : null
+  var all = group && group.all instanceof Array ? group.all : []
+  var options = []
+  for (var i = 0; i < all.length; i++) {
+    var name = String(all[i] || "")
+    if (name !== "") options.push({ value: name, label: name })
+  }
+  return { current: group ? String(group.now || "") : "", options: options }
 }
 
 function parseTrafficLine(line) {

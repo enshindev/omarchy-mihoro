@@ -73,7 +73,7 @@ Panel {
     clampCursor()
     var target = cursorTarget
     if (target === "power") mihoro.toggleService()
-    else if (target === "mode") mihoro.setMode(Model.MODES[modeCursor].value)
+    else if (target === "mode") root.requestMode(Model.MODES[modeCursor].value)
     else if (target === "subscription") root.openSubscriptionPage()
     else if (target === "edit") subscription.beginEdit()
     else if (target === "update") mihoro.updateSubscription()
@@ -83,6 +83,18 @@ Panel {
         root.openSubscriptionPage()
         subscription.beginEdit()
       }
+    }
+  }
+
+  function requestMode(value) {
+    var action = Model.modeSelectionAction(value, mihoro.mode)
+    if (action === "choose_proxy") {
+      modeSection.selectingGlobal = true
+      mihoro.refreshProxies()
+    } else {
+      modeSection.selectingGlobal = false
+      mihoro.cancelGlobalSelection()
+      if (action === "switch") mihoro.setMode(value)
     }
   }
 
@@ -105,8 +117,9 @@ Panel {
 
   function cycleMode(delta) {
     if (!mihoro.canSwitchMode) return
-    var next = (Model.modeIndex(mihoro.mode) + delta + Model.MODES.length) % Model.MODES.length
-    mihoro.setMode(Model.MODES[next].value)
+    var current = modeSection.selectingGlobal ? Model.modeIndex("global") : Model.modeIndex(mihoro.mode)
+    var next = (current + delta + Model.MODES.length) % Model.MODES.length
+    root.requestMode(Model.MODES[next].value)
   }
 
   Service {
@@ -230,9 +243,9 @@ Panel {
         else if (root.panelPage === 1 && key === "r") mihoro.refresh()
         else if (root.panelPage === 1 && key === "s") root.openSubscriptionPage()
         else if (root.panelPage === 1 && key === "m") root.cycleMode(1)
-        else if (root.panelPage === 1 && key === "1") mihoro.setMode("rule")
-        else if (root.panelPage === 1 && key === "2") mihoro.setMode("global")
-        else if (root.panelPage === 1 && key === "3") mihoro.setMode("direct")
+        else if (root.panelPage === 1 && key === "1") root.requestMode("rule")
+        else if (root.panelPage === 1 && key === "2") root.requestMode("global")
+        else if (root.panelPage === 1 && key === "3") root.requestMode("direct")
       }
 
       Flickable {
@@ -288,7 +301,7 @@ Panel {
               anchors.verticalCenter: parent.verticalCenter
               spacing: Style.space(6)
 
-              ToggleSwitch {
+              ServiceSwitch {
                 id: powerSwitch
                 anchors.verticalCenter: parent.verticalCenter
                 visible: mihoro.initialized
@@ -356,6 +369,7 @@ Panel {
           }
 
           ModeSection {
+            id: modeSection
             visible: root.panelPage === 1 && mihoro.initialized
             width: parent.width
             textColor: root.foreground
@@ -365,10 +379,18 @@ Panel {
             pending: mihoro.pendingMode !== ""
             hint: mihoro.modeHint
             cursorIndex: root.cursorTarget === "mode" ? root.modeCursor : -1
-            onModeRequested: function(value) { mihoro.setMode(value) }
+            proxyOptions: mihoro.globalProxyOptions
+            currentProxy: mihoro.pendingGlobalProxy !== "" ? mihoro.pendingGlobalProxy : mihoro.currentGlobalProxy
+            onModeRequested: function(value) { root.requestMode(value) }
+            onGlobalRequested: mihoro.refreshProxies()
+            onProxyRequested: function(value) { mihoro.selectGlobalProxy(value) }
             onSubscriptionRequested: root.openSubscriptionPage()
             onChipHovered: function(index, isHovered) {
-              if (!isHovered || !mihoro.canSwitchMode) return
+              if (!isHovered) {
+                if (root.cursorTarget === "mode") root.cursorActive = false
+                return
+              }
+              if (!mihoro.canSwitchMode) return
               root.cursorActive = true
               root.cursorIndex = root.targets.indexOf("mode")
               root.modeCursor = index

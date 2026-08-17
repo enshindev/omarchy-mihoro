@@ -44,6 +44,15 @@ assert.strictEqual(authed[authed.length - 1], "http://127.0.0.1:9090/configs")
 const connections = api.connectionsCommand("http://127.0.0.1:9090", "")
 assert.strictEqual(connections[connections.length - 1], "http://127.0.0.1:9090/connections")
 
+const proxies = api.proxiesCommand("http://127.0.0.1:9090", "s3cret")
+assert.ok(proxies.includes("Authorization: Bearer s3cret"))
+assert.strictEqual(proxies[proxies.length - 1], "http://127.0.0.1:9090/proxies")
+
+const selectGlobal = api.selectProxyCommand("http://127.0.0.1:9090", "s3cret", "GLOBAL", "Tokyo JP")
+assert.ok(selectGlobal.includes("PUT"))
+assert.ok(selectGlobal.includes('{"name":"Tokyo JP"}'))
+assert.strictEqual(selectGlobal[selectGlobal.length - 1], "http://127.0.0.1:9090/proxies/GLOBAL")
+
 const setMode = api.setModeCommand("http://127.0.0.1:9090", "s3cret", "Global")
 assert.ok(setMode.includes("PATCH"))
 assert.ok(setMode.includes('{"mode":"global"}'), "mode is normalised before it is sent")
@@ -131,6 +140,19 @@ assert.strictEqual(conns.memory, 4096)
 // mihomo sends `connections: null` when there are none.
 assert.strictEqual(api.parseConnections('{"downloadTotal":1,"uploadTotal":2,"connections":null}').count, 0)
 assert.strictEqual(api.parseConnections("nope"), null)
+
+const global = api.parseGlobalProxies(JSON.stringify({
+  proxies: {
+    GLOBAL: { type: "Selector", now: "Tokyo JP", all: ["DIRECT", "Tokyo JP", "Singapore"] },
+    "Tokyo JP": { type: "Shadowsocks" }
+  }
+}))
+assert.strictEqual(global.current, "Tokyo JP")
+assert.strictEqual(global.options.length, 3)
+assert.strictEqual(global.options[0].value, "DIRECT")
+assert.strictEqual(global.options[2].label, "Singapore")
+assert.strictEqual(api.parseGlobalProxies('{"proxies":{}}').options.length, 0)
+assert.strictEqual(api.parseGlobalProxies("nope"), null)
 
 const sample = api.parseTrafficLine('{"up":120,"down":4096}')
 assert.strictEqual(sample.up, 120)

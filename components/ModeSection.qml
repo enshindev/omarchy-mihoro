@@ -20,8 +20,13 @@ Column {
   property bool pending: false
   property string hint: ""
   property int cursorIndex: -1
+  property var proxyOptions: []
+  property string currentProxy: ""
+  property bool selectingGlobal: false
 
   signal modeRequested(string value)
+  signal globalRequested()
+  signal proxyRequested(string value)
   signal chipHovered(int index, bool isHovered)
   signal subscriptionRequested()
 
@@ -61,24 +66,72 @@ Column {
     width: parent.width
     spacing: Style.space(6)
 
-    ButtonGroup {
+    Row {
       id: group
       anchors.verticalCenter: parent.verticalCenter
       width: modeControlRow.width - subscriptionButton.width - modeControlRow.spacing
-      options: root.options
-      value: root.mode
-      foreground: root.textColor
-      accent: root.accentColor
-      fontFamily: root.panelFontFamily
-      fontSize: Style.font.bodySmall
-      // The panel drives the cursor; Tab focus would give the group a second,
-      // competing highlight inside a surface that already has one.
-      focusable: false
-      cursorIndex: root.cursorIndex
+      spacing: Style.space(6)
       opacity: root.switchable ? 1.0 : 0.45
       enabled: root.switchable
-      onChanged: function(value) { if (root.switchable) root.modeRequested(value) }
-      onHovered: function(index, isHovered) { root.chipHovered(index, isHovered) }
+
+      Repeater {
+        model: root.options
+
+        delegate: Rectangle {
+          id: chip
+          required property var modelData
+          required property int index
+          readonly property bool selected: String(modelData.value) === root.mode
+          readonly property bool hot: chipHover.hovered || root.cursorIndex === index
+
+          width: chipLabel.implicitWidth + Style.space(28)
+          height: chipLabel.implicitHeight + Style.space(18)
+          radius: Style.cornerRadius
+          color: selected
+            ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, hot ? 0.32 : 0.22)
+            : (hot
+              ? Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.12)
+              : Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.035))
+          border.width: selected ? 2 : 1
+          border.color: selected
+            ? (hot ? Qt.lighter(root.accentColor, 1.22) : root.accentColor)
+            : Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, hot ? 0.55 : 0.22)
+
+          Behavior on color { ColorAnimation { duration: 90 } }
+
+          Text {
+            id: chipLabel
+            anchors.centerIn: parent
+            text: String(chip.modelData.label)
+            color: chip.selected
+              ? (chip.hot ? Qt.lighter(root.accentColor, 1.22) : root.accentColor)
+              : root.textColor
+            font.family: root.panelFontFamily
+            font.pixelSize: Style.font.bodySmall
+            font.bold: chip.selected
+          }
+
+          HoverHandler {
+            id: chipHover
+            onHoveredChanged: root.chipHovered(chip.index, hovered)
+          }
+
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              var value = String(chip.modelData.value)
+              if (value === "global") {
+                root.selectingGlobal = true
+                root.globalRequested()
+              } else {
+                root.selectingGlobal = false
+                root.modeRequested(value)
+              }
+            }
+          }
+        }
+      }
     }
 
     PanelActionButton {
@@ -98,6 +151,20 @@ Column {
           : subscriptionButton.foreground
       }
     }
+  }
+
+  SearchableDropdown {
+    width: parent.width
+    visible: root.selectingGlobal || root.mode === "global"
+    label: "GLOBAL CONNECTION"
+    value: root.currentProxy
+    options: root.proxyOptions
+    placeholderText: root.proxyOptions.length > 0 ? "Choose a connection…" : "No connections available"
+    emptyText: "No connections available"
+    foreground: root.textColor
+    accent: root.accentColor
+    fontFamily: root.panelFontFamily
+    onChanged: function(value) { root.proxyRequested(value) }
   }
 
   Text {

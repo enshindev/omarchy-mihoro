@@ -140,7 +140,11 @@ grep -Fq 'key === "t"' Panel.qml
 grep -Fq 'key === "r"' Panel.qml
 grep -Fq 'key === "u"' Panel.qml
 grep -Fq 'key === "e"' Panel.qml
-grep -Fq 'mihoro.setMode("global")' Panel.qml
+grep -Fq 'root.requestMode("global")' Panel.qml
+grep -Fq 'ServiceSwitch {' Panel.qml
+grep -Fq 'property color onColor: Color.accent' components/ServiceSwitch.qml
+grep -Fq 'property color offColor: Qt.darker(foreground, 1.6)' components/ServiceSwitch.qml
+! grep -Eq '#[0-9a-fA-F]{6}' components/ServiceSwitch.qml
 
 # IPC is how the rest of Omarchy drives the panel.
 grep -Fq 'function mode(value: string): string' Panel.qml

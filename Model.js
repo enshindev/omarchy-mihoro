@@ -21,6 +21,13 @@ function modeIndex(value) {
   return 0
 }
 
+function modeSelectionAction(next, current) {
+  var wanted = String(next || "").toLowerCase()
+  if (modeIndex(wanted) >= MODES.length || MODES[modeIndex(wanted)].value !== wanted) return "none"
+  if (wanted === "global") return "choose_proxy"
+  return wanted === String(current || "").toLowerCase() ? "none" : "switch"
+}
+
 // ------------------------------------------------------------------ the CLI
 //
 // mihoro is installed by the user, not by this plugin: it owns the mihomo
