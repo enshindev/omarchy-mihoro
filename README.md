@@ -41,6 +41,12 @@ Install the Omarchy plugin:
 omarchy plugin add https://github.com/huacnlee/omarchy-mihoro.git --enable
 ```
 
+Remove the Omarchy plugin:
+
+```bash
+omarchy plugin remove mihoro.omarchy
+```
+
 If mihomo does not start, inspect its recent logs:
 
 ```bash
