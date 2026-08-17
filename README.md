@@ -3,6 +3,8 @@
 An Omarchy bar panel for [mihoro](https://github.com/spencerwooo/mihoro), the
 Mihomo CLI client for Linux.
 
+<img width="621" height="720" alt="image" src="https://github.com/user-attachments/assets/ca5a27d9-a05e-4134-8cae-360ddef861d8" />
+
 It does three things: shows what the proxy is actually doing, manages the
 subscription URL, and switches between Rule, Global, and Direct.
 
