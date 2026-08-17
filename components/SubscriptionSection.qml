@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as QQC
 import qs.Commons
 import qs.Ui
 import "../Model.js" as Model
@@ -22,6 +23,7 @@ Column {
 
   signal urlCommitted(string url)
   signal updateRequested()
+  signal backRequested()
 
   readonly property string url: service.config.remoteConfigUrl
   readonly property bool updating: service.actionKind === "update" || service.actionKind === "init"
@@ -48,13 +50,26 @@ Column {
     width: parent.width
     implicitHeight: Math.max(sectionHeader.implicitHeight, updatedLabel.implicitHeight)
 
-    PanelSectionHeader {
+    Row {
       id: sectionHeader
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
-      text: "SUBSCRIPTION"
-      foreground: root.textColor
-      fontFamily: root.panelFontFamily
+      spacing: Style.space(8)
+
+      Button {
+        text: "←"
+        foreground: root.textColor
+        bordered: false
+        fontSize: Style.font.title
+        onClicked: root.backRequested()
+      }
+
+      PanelSectionHeader {
+        anchors.verticalCenter: parent.verticalCenter
+        text: "SUBSCRIPTION"
+        foreground: root.textColor
+        fontFamily: root.panelFontFamily
+      }
     }
 
     Text {
@@ -70,32 +85,30 @@ Column {
   }
 
   // ---- read-only view
-  CursorSurface {
+  QQC.TextField {
+    id: urlDisplay
     visible: !root.editing
     width: parent.width
-    implicitHeight: urlText.implicitHeight + Style.spacing.rowPaddingX
-    foreground: root.textColor
-    hasCursor: root.cursorTarget === "url"
-
-    Text {
-      id: urlText
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.verticalCenter: parent.verticalCenter
-      anchors.leftMargin: Style.space(10)
-      anchors.rightMargin: Style.space(10)
-      text: Model.displayUrl(root.url, root.revealed)
-      color: root.url === ""
-        ? Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.55)
-        : root.textColor
-      font.family: root.panelFontFamily
-      font.pixelSize: Style.font.bodySmall
-      wrapMode: Text.WrapAnywhere
-      maximumLineCount: 2
-      elide: Text.ElideRight
+    implicitHeight: Style.space(40)
+    readOnly: true
+    focusPolicy: Qt.NoFocus
+    selectByMouse: false
+    text: Model.displayUrl(root.url, root.revealed)
+    color: root.url === ""
+      ? Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.55)
+      : root.textColor
+    font.family: root.panelFontFamily
+    font.pixelSize: Style.font.bodySmall
+    leftPadding: Style.space(10)
+    rightPadding: Style.space(10)
+    topPadding: Style.space(8)
+    bottomPadding: Style.space(8)
+    background: Rectangle {
+      radius: Style.cornerRadius
+      color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.04)
+      border.width: 1
+      border.color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.16)
     }
-
-    TapHandler { onTapped: root.beginEdit() }
   }
 
   Row {
@@ -104,7 +117,7 @@ Column {
     spacing: Style.spacing.controlGap
 
     Button {
-      text: root.updating ? "Fetching…" : "Update now"
+      text: root.updating ? "Updating…" : "Update"
       foreground: root.textColor
       bordered: true
       enabled: root.url !== "" && !root.service.busy
@@ -114,10 +127,11 @@ Column {
     }
 
     Button {
-      text: root.url === "" ? "Add URL" : "Change URL"
+      text: root.url === "" ? "Add" : "Edit"
       foreground: root.textColor
       bordered: true
       enabled: !root.service.busy
+      hasCursor: root.cursorTarget === "edit"
       fontSize: Style.font.bodySmall
       onClicked: root.beginEdit()
     }
@@ -138,12 +152,32 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    TextField {
+    QQC.TextArea {
       id: field
       width: parent.width
-      foreground: root.textColor
+      implicitHeight: Math.max(Style.space(74), contentHeight + topPadding + bottomPadding)
+      color: root.textColor
+      selectionColor: Color.accent
+      selectedTextColor: root.textColor
+      placeholderTextColor: Qt.darker(root.textColor, 1.6)
       placeholderText: "https://example.com/subscription"
-      onAccepted: root.commit()
+      font.family: root.panelFontFamily
+      font.pixelSize: Style.font.body
+      wrapMode: TextEdit.WrapAnywhere
+      selectByMouse: true
+      leftPadding: Style.spacing.controlPaddingX
+      rightPadding: Style.spacing.controlPaddingX
+      topPadding: Style.spacing.inputPaddingY
+      bottomPadding: Style.spacing.inputPaddingY
+      background: Rectangle {
+        radius: Style.cornerRadius
+        color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b,
+          field.activeFocus ? 0.09 : 0.04)
+        border.width: field.activeFocus ? 2 : 1
+        border.color: field.activeFocus
+          ? Color.accent
+          : Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.24)
+      }
       Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape) {
           root.cancelEdit()
@@ -166,7 +200,7 @@ Column {
       spacing: Style.spacing.controlGap
 
       Button {
-        text: root.service.probe.configPresent ? "Save and fetch" : "Save and set up"
+        text: root.service.probe.configPresent ? "Update" : "Save and set up"
         foreground: root.textColor
         bordered: true
         enabled: Model.subscriptionUrlError(field.text) === "" && !root.service.busy

@@ -159,12 +159,17 @@ function parseVersion(body) {
 function parseConfigs(body) {
   var payload = parseJson(body)
   if (!payload) return null
+  var tun = payload.tun
+  var tunEnabled = tun && typeof tun === "object" && typeof tun.enable === "boolean"
+    ? tun.enable
+    : null
   return {
     mode: normalizeMode(payload.mode),
     port: Number(payload.port) || 0,
     socksPort: Number(payload["socks-port"]) || 0,
     mixedPort: Number(payload["mixed-port"]) || 0,
     allowLan: payload["allow-lan"] === true,
+    tunEnabled: tunEnabled,
     logLevel: String(payload["log-level"] || "")
   }
 }

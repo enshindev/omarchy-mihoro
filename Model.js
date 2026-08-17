@@ -36,6 +36,7 @@ function applyCommand() { return ["mihoro", "apply"] }
 function startCommand() { return ["mihoro", "start"] }
 function stopCommand() { return ["mihoro", "stop"] }
 function restartCommand() { return ["mihoro", "restart"] }
+function proxyExportCommand() { return ["mihoro", "proxy", "export"] }
 
 // One probe per refresh instead of five processes. It answers: is the CLI on
 // PATH, what does systemd think of mihomo.service, when did it last come up,
@@ -224,32 +225,17 @@ function subscriptionUrlError(url) {
   return ""
 }
 
-var MASK = "••••••"
+var MASK = "*******"
 
 // A subscription URL is a bearer credential: the token is the whole of the
-// authentication. It is masked whole rather than partially, because a panel in
-// a bar is read over shoulders and half a token is still half a token.
+// authentication. Keep only the origin recognizable; paths, query names,
+// values, and fragments can all identify an account or expose credentials.
 function maskUrl(url) {
   var text = String(url === undefined || url === null ? "" : url).trim()
   if (text === "") return ""
-  var parts = text.match(/^([a-z][a-z0-9+.\-]*:\/\/)([^\/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/i)
+  var parts = text.match(/^([a-z][a-z0-9+.\-]*:\/\/)([^\/?#]+)/i)
   if (!parts) return MASK
-
-  var path = String(parts[3] || "").split("/").map(function(segment) {
-    return segment.length >= 12 ? MASK : segment
-  }).join("/")
-
-  var query = String(parts[4] || "")
-  if (query !== "") {
-    query = "?" + query.substring(1).split("&").map(function(pair) {
-      var eq = pair.indexOf("=")
-      if (eq < 0) return pair.length >= 8 ? MASK : pair
-      var value = pair.substring(eq + 1)
-      return pair.substring(0, eq) + "=" + (value.length >= 8 ? MASK : value)
-    }).join("&")
-  }
-
-  return String(parts[1]) + String(parts[2]) + path + query + (parts[5] ? MASK : "")
+  return String(parts[1]) + String(parts[2]) + "/" + MASK
 }
 
 function displayUrl(url, revealed) {

@@ -17,10 +17,38 @@ schedules it. When mihoro is missing the panel says so and links to the
 official instructions; it never downloads or runs an installer, and it never
 asks for root.
 
-## Install
+## Getting Started
+
+Install mihoro:
 
 ```bash
-omarchy plugin add https://github.com/<you>/omahoro.git --enable
+curl -fsSL https://raw.githubusercontent.com/spencerwooo/mihoro/main/install.sh | sh
+```
+
+Initialize mihoro and enter your subscription URL when prompted:
+
+```bash
+mihoro init
+```
+
+Set the capabilities required for TUN mode, confirm them, and restart mihomo:
+
+```bash
+sudo setcap cap_net_admin,cap_net_raw,cap_net_bind_service=+ep ~/.local/bin/mihomo
+getcap ~/.local/bin/mihomo
+systemctl --user restart mihomo.service
+```
+
+Verify that the service started successfully:
+
+```bash
+journalctl --user -u mihomo.service -n 30 --no-pager
+```
+
+## Install the Plugin
+
+```bash
+omarchy plugin add https://github.com/huacnlee/omarchy-mihoro.git --enable
 ```
 
 For development, symlink this checkout into Omarchy:
@@ -134,10 +162,11 @@ anywhere; the control goes quiet and says to start mihomo instead.
 - `enter`: activate
 - `t`: start or stop mihomo
 - `1` / `2` / `3`: Rule / Global / Direct, `m` to cycle
-- `u`: update the subscription
-- `e`: edit the subscription URL
+- `s`: open subscription management
+- `u`: update the subscription (subscription page)
+- `e`: edit the subscription URL (subscription page)
 - `r`: refresh
-- `esc`: close, or leave the URL editor
+- `esc`: leave URL editing, return to the main page, then close
 
 While the URL editor is open every key belongs to it — a URL contains `r` and
 `u`.

@@ -103,6 +103,7 @@ const configs = api.parseConfigs(JSON.stringify({
   "socks-port": 7892,
   "mixed-port": 7890,
   "allow-lan": true,
+  tun: { enable: true },
   mode: "Global",
   "log-level": "info"
 }))
@@ -111,6 +112,9 @@ assert.strictEqual(configs.mixedPort, 7890)
 assert.strictEqual(configs.port, 7891)
 assert.strictEqual(configs.socksPort, 7892)
 assert.strictEqual(configs.allowLan, true)
+assert.strictEqual(configs.tunEnabled, true)
+assert.strictEqual(api.parseConfigs('{"tun":{"enable":false}}').tunEnabled, false)
+assert.strictEqual(api.parseConfigs('{"mode":"rule"}').tunEnabled, null)
 assert.strictEqual(api.parseConfigs("["), null)
 
 const conns = api.parseConnections(JSON.stringify({
