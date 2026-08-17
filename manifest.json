@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "mihoro.omarchy",
+  "name": "Mihoro",
+  "version": "0.1.0",
+  "author": "omahoro",
+  "license": "MIT",
+  "description": "Mihomo connection status, URL subscription, and proxy mode switching in the Omarchy bar, driven by the mihoro CLI.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Mihoro",
+    "description": "Watch mihomo, switch between Rule, Global and Direct, and manage the subscription URL.",
+    "category": "Network",
+    "aliases": [
+      "mihomo",
+      "clash",
+      "proxy",
+      "vpn"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 30
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 5,
+        "max": 3600,
+        "step": 5,
+        "defaultValue": 30
+      }
+    ]
+  }
+}
