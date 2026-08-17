@@ -9,15 +9,14 @@ import "../Model.js" as Model
 // it are one action here — a saved URL that nothing has downloaded would show a
 // subscription the proxy is not actually using.
 //
-// The URL is masked by default. It is a bearer credential: whoever has it has
-// the subscription, and a bar panel is read over shoulders.
+// The URL is a bearer credential, so read-only mode never renders it. It only
+// enters a control after the user explicitly chooses Edit/Add.
 Column {
   id: root
 
   required property var service
   required property color textColor
   required property string panelFontFamily
-  property bool revealed: false
   property bool editing: false
   property string cursorTarget: ""
 
@@ -48,7 +47,7 @@ Column {
 
   Item {
     width: parent.width
-    implicitHeight: Math.max(sectionHeader.implicitHeight, updatedLabel.implicitHeight)
+    implicitHeight: sectionHeader.implicitHeight
 
     Row {
       id: sectionHeader
@@ -72,51 +71,59 @@ Column {
       }
     }
 
-    Text {
-      id: updatedLabel
-      anchors.right: parent.right
+  }
+
+  Rectangle {
+    id: subscriptionStatus
+    visible: !root.editing && root.service.probe.configPresent
+    width: parent.width
+    implicitHeight: Style.space(38)
+    radius: Style.cornerRadius
+    color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.04)
+    border.width: 1
+    border.color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.12)
+
+    Row {
+      anchors.left: parent.left
+      anchors.leftMargin: Style.space(10)
       anchors.verticalCenter: parent.verticalCenter
-      visible: root.service.probe.configPresent
-      text: "updated " + Model.formatAgo(root.service.probe.configMtime, root.service.probe.now)
+      spacing: Style.space(7)
+
+      Rectangle {
+        anchors.verticalCenter: parent.verticalCenter
+        width: Style.space(6)
+        height: width
+        radius: width / 2
+        color: Color.accent
+      }
+
+      Text {
+        text: "Configured"
+        color: root.textColor
+        font.family: root.panelFontFamily
+        font.pixelSize: Style.font.bodySmall
+      }
+    }
+
+    Text {
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(10)
+      anchors.verticalCenter: parent.verticalCenter
+      text: "Last updated " + Model.formatAgo(root.service.probe.configMtime, root.service.probe.now)
       color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.55)
       font.family: root.panelFontFamily
       font.pixelSize: Style.font.caption
     }
   }
 
-  // ---- read-only view
-  QQC.TextField {
-    id: urlDisplay
-    visible: !root.editing
-    width: parent.width
-    implicitHeight: Style.space(40)
-    readOnly: true
-    focusPolicy: Qt.NoFocus
-    selectByMouse: false
-    text: Model.displayUrl(root.url, root.revealed)
-    color: root.url === ""
-      ? Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.55)
-      : root.textColor
-    font.family: root.panelFontFamily
-    font.pixelSize: Style.font.bodySmall
-    leftPadding: Style.space(10)
-    rightPadding: Style.space(10)
-    topPadding: Style.space(8)
-    bottomPadding: Style.space(8)
-    background: Rectangle {
-      radius: Style.cornerRadius
-      color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.04)
-      border.width: 1
-      border.color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.16)
-    }
-  }
-
   Row {
+    id: subscriptionActions
     visible: !root.editing
     width: parent.width
     spacing: Style.spacing.controlGap
 
     Button {
+      width: (subscriptionActions.width - subscriptionActions.spacing) / 2
       text: root.updating ? "Updating…" : "Update"
       foreground: root.textColor
       bordered: true
@@ -127,6 +134,7 @@ Column {
     }
 
     Button {
+      width: (subscriptionActions.width - subscriptionActions.spacing) / 2
       text: root.url === "" ? "Add" : "Edit"
       foreground: root.textColor
       bordered: true
@@ -136,14 +144,6 @@ Column {
       onClicked: root.beginEdit()
     }
 
-    Button {
-      visible: root.url !== ""
-      text: root.revealed ? "Hide" : "Show"
-      foreground: root.textColor
-      bordered: false
-      fontSize: Style.font.bodySmall
-      onClicked: root.revealed = !root.revealed
-    }
   }
 
   // ---- editor
@@ -151,6 +151,12 @@ Column {
     visible: root.editing
     width: parent.width
     spacing: Style.space(8)
+
+    PanelSectionHeader {
+      text: "SUBSCRIPTION URL"
+      foreground: root.textColor
+      fontFamily: root.panelFontFamily
+    }
 
     QQC.TextArea {
       id: field
@@ -197,9 +203,12 @@ Column {
     }
 
     Row {
+      id: editorActions
+      width: parent.width
       spacing: Style.spacing.controlGap
 
       Button {
+        width: (editorActions.width - editorActions.spacing) / 2
         text: root.service.probe.configPresent ? "Update" : "Save and set up"
         foreground: root.textColor
         bordered: true
@@ -209,6 +218,7 @@ Column {
       }
 
       Button {
+        width: (editorActions.width - editorActions.spacing) / 2
         text: "Cancel"
         foreground: root.textColor
         bordered: false

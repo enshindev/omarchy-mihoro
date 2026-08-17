@@ -68,9 +68,10 @@ grep -Fq 'remote_config_url' MihoroConfig.js
 # subscription the proxy is not using.
 grep -Fq 'writeConfig({ remoteConfigUrl: text }' Service.qml
 
-# Masked by default, with an explicit reveal.
-grep -Fq 'property bool revealed: false' components/SubscriptionSection.qml
-grep -Fq 'Model.displayUrl(root.url, root.revealed)' components/SubscriptionSection.qml
+# The credential is absent from read-only mode; it only enters a control after
+# the user explicitly chooses Edit/Add.
+! grep -Fq 'property bool revealed:' components/SubscriptionSection.qml
+! grep -Fq 'Model.displayUrl(' components/SubscriptionSection.qml
 
 # The write is atomic and keeps the file's permissions — it holds a credential.
 grep -Fq 'mktemp' MihoroConfig.js
@@ -114,22 +115,25 @@ grep -Fq 'width: modeControlRow.width - subscriptionButton.width - modeControlRo
 grep -Fq 'onBackRequested: root.leaveSubscriptionPage()' Panel.qml
 grep -Fq 'if (root.panelPage === 2) root.leaveSubscriptionPage()' Panel.qml
 
-# Page two owns subscription editing. The displayed URL itself is deliberately
-# inert; only the named Edit/Add action opens the field.
+# Page two owns subscription editing. Read-only mode never renders the URL;
+# only the named Edit/Add action opens the field.
 grep -Fq 'text: "SUBSCRIPTION"' components/SubscriptionSection.qml
 grep -Fq 'text: root.url === "" ? "Add" : "Edit"' components/SubscriptionSection.qml
 grep -Fq 'text: root.updating ? "Updating…" : "Update"' components/SubscriptionSection.qml
 grep -Fq 'text: root.service.probe.configPresent ? "Update" : "Save and set up"' components/SubscriptionSection.qml
-grep -Fq 'text: root.revealed ? "Hide" : "Show"' components/SubscriptionSection.qml
 grep -Fq 'QQC.TextArea {' components/SubscriptionSection.qml
-grep -Fq 'QQC.TextField {' components/SubscriptionSection.qml
 grep -Fq 'wrapMode: TextEdit.WrapAnywhere' components/SubscriptionSection.qml
-grep -Fq 'readOnly: true' components/SubscriptionSection.qml
-grep -Fq 'focusPolicy: Qt.NoFocus' components/SubscriptionSection.qml
-grep -Fq 'text: Model.displayUrl(root.url, root.revealed)' components/SubscriptionSection.qml
-! sed -n '/id: urlDisplay/,/\/\/ ---- editor/p' components/SubscriptionSection.qml | grep -Fq 'wrapMode:'
+! grep -Fq 'QQC.TextField {' components/SubscriptionSection.qml
+! grep -Fq 'text: "Show"' components/SubscriptionSection.qml
+! grep -Fq 'text: "Hide"' components/SubscriptionSection.qml
+grep -Fq 'text: "Last updated " + Model.formatAgo' components/SubscriptionSection.qml
+grep -Fq 'visible: !root.editing && root.service.probe.configPresent' components/SubscriptionSection.qml
+grep -Fq 'id: subscriptionStatus' components/SubscriptionSection.qml
+grep -Fq 'id: subscriptionActions' components/SubscriptionSection.qml
+grep -Fq 'width: (subscriptionActions.width - subscriptionActions.spacing) / 2' components/SubscriptionSection.qml
+grep -Fq 'text: "SUBSCRIPTION URL"' components/SubscriptionSection.qml
+grep -Fq 'id: editorActions' components/SubscriptionSection.qml
 ! sed -n '/\/\/ ---- editor/,$p' components/SubscriptionSection.qml | grep -Fq 'TextField {'
-! sed -n '/id: urlDisplay/,/^  }/p' components/SubscriptionSection.qml | grep -Fq 'TapHandler'
 
 # Keyboard: toggle, refresh, update, edit, and the three modes by number.
 grep -Fq 'key === "t"' Panel.qml

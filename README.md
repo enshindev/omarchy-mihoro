@@ -126,10 +126,9 @@ would show a subscription the proxy is not actually using. On a machine that
 has never been set up, saving runs `mihoro init -y` instead, which downloads
 the core, the config, and installs the service.
 
-The URL is masked by default and revealed with a button. It is a bearer
-credential — whoever has it has the subscription — and a bar panel gets read
-over shoulders, so the token is hidden whole rather than partially. Half a
-token is still half a token.
+The URL is never rendered in read-only mode. It is a bearer credential —
+whoever has it has the subscription — and only enters a control after you
+explicitly choose Edit.
 
 Writes are line-level replacements, not a parse-and-reserialize round trip.
 Everything else in `mihoro.toml` is yours: key order, blank lines, comments,
