@@ -15,11 +15,7 @@ and manage your subscription.
 
 ## Getting Started
 
-Install mihoro:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/spencerwooo/mihoro/main/install.sh | sh
-```
+Install mihoro by following its [upstream installation instructions](https://github.com/spencerwooo/mihoro#installation).
 
 Initialize it and enter your subscription URL when prompted:
 
