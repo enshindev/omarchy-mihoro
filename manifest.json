@@ -3,9 +3,9 @@
   "id": "mihoro.omarchy",
   "name": "Mihoro",
   "version": "0.1.0",
-  "author": "omahoro",
+  "author": "Jason Lee <huacnlee@gmail.com>",
   "license": "MIT",
-  "description": "Mihomo connection status, URL subscription, and proxy mode switching in the Omarchy bar, driven by the mihoro CLI.",
+  "description": "Clash and Mihomo proxy control in the Omarchy bar: connection status, live up/down speed, Rule, Global and Direct mode switching, and Clash subscription updates, driven by the mihoro CLI.",
   "kinds": [
     "bar-widget"
   ],
@@ -15,13 +15,17 @@
   },
   "barWidget": {
     "displayName": "Mihoro",
-    "description": "Watch mihomo, switch between Rule, Global and Direct, and manage the subscription URL.",
+    "description": "Watch your Clash/Mihomo proxy, switch between Rule, Global and Direct, and manage the subscription URL.",
     "category": "Network",
     "aliases": [
       "mihomo",
+      "mihoro",
       "clash",
+      "clash meta",
       "proxy",
-      "vpn"
+      "vpn",
+      "subscription",
+      "tun"
     ],
     "allowMultiple": false,
     "defaultSection": "right",
