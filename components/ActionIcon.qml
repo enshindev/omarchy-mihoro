@@ -60,6 +60,10 @@ Canvas {
       move(2.5, 13.5); line(3.4, 10.4); line(11.2, 2.6); line(13.4, 4.8)
       line(5.6, 12.6); ctx.closePath()
       move(9.6, 4.2); line(11.8, 6.4)
+    } else if (root.name === "arrow-up") {
+      move(3.5, 9.5); line(8, 5); line(12.5, 9.5)
+    } else if (root.name === "arrow-down") {
+      move(3.5, 6.5); line(8, 11); line(12.5, 6.5)
     } else if (root.name === "settings") {
       // A gear, built from the grid rather than listed as points: eight teeth
       // are eight identical spokes, and writing them out would only invite one
