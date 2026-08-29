@@ -95,6 +95,34 @@ refute -Eq '#[0-9a-fA-F]{6}' components/Sparkline.qml
 grep -Fq 'label: "TUN"' components/ConnectionSection.qml
 grep -Fq 'root.service.liveConfigs.tunEnabled' components/ConnectionSection.qml
 
+# The active node is a first-class connection fact. At rest it is a plain
+# label/value row; editing stages a choice until Apply, while Cancel does not
+# touch the core. Rule controls PROXY, Global controls GLOBAL, and Direct has
+# no selectable proxy group.
+grep -Fq 'label: "Proxy"' components/ConnectionSection.qml
+grep -Fq 'root.service.currentModeProxy' components/ConnectionSection.qml
+grep -Fq 'root.service.currentModeProxyOptions' components/ConnectionSection.qml
+grep -Fq 'property bool editingProxy: false' components/ConnectionSection.qml
+grep -Fq 'property string draftProxy: ""' components/ConnectionSection.qml
+grep -Fq 'id: proxyValue' components/ConnectionSection.qml
+grep -Fq 'anchors.right: parent.right' components/ConnectionSection.qml
+grep -Fq 'anchors.left: proxyLabel.right' components/ConnectionSection.qml
+grep -Fq 'text: "Apply"' components/ConnectionSection.qml
+grep -Fq 'text: "Cancel"' components/ConnectionSection.qml
+python3 - <<'PROXY_CANCEL'
+import re, sys
+src = open("components/ConnectionSection.qml").read()
+block = re.search(r'text: "Cancel"(.*?)onClicked: root\.cancelProxyEdit\(\)', src, re.S)
+if not block or "bordered: true" not in block.group(1):
+    sys.exit("proxy Cancel must be an outline button")
+print("proxy cancel outline ok")
+PROXY_CANCEL
+grep -Fq 'root.service.selectModeProxy(root.draftProxy)' components/ConnectionSection.qml
+refute -Fq 'onChanged: function(value) { root.service.selectModeProxy(value) }' components/ConnectionSection.qml
+grep -Fq 'readonly property string currentProxyGroup:' Service.qml
+grep -Fq 'ClashApi.parseProxyGroup(result.body, "PROXY")' Service.qml
+grep -Fq 'ClashApi.selectProxyCommand(apiBase, config.secret, currentProxyGroup, wanted)' Service.qml
+
 # ---- subscriptions --------------------------------------------------------
 
 # URL subscriptions only: one remote config URL, fetched by the CLI.

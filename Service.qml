@@ -57,6 +57,8 @@ Item {
   property var trafficAnchor: null
   property var globalProxyOptions: []
   property string currentGlobalProxy: ""
+  property var ruleProxyOptions: []
+  property string currentRuleProxy: ""
 
   // ---- in-flight intent
   //
@@ -66,6 +68,8 @@ Item {
   property int desiredActive: -1
   property string pendingMode: ""
   property string pendingGlobalProxy: ""
+  property string pendingModeProxy: ""
+  property string pendingProxyGroup: ""
   property bool globalSelectionRequested: false
   property string actionKind: ""
   property string actionStatus: ""
@@ -123,6 +127,13 @@ Item {
   // agree except in the window between a switch and the next refresh.
   readonly property string mode: pendingMode !== "" ? pendingMode
     : (liveConfigs && liveConfigs.mode !== "" ? liveConfigs.mode : config.mode)
+  readonly property string currentProxyGroup: mode === "rule" ? "PROXY"
+    : (mode === "global" ? "GLOBAL" : "")
+  readonly property var currentModeProxyOptions: mode === "rule" ? ruleProxyOptions
+    : (mode === "global" ? globalProxyOptions : [])
+  readonly property string currentModeProxy: mode === "direct" ? "DIRECT"
+    : (pendingModeProxy !== "" && pendingProxyGroup === currentProxyGroup ? pendingModeProxy
+      : (mode === "rule" ? currentRuleProxy : currentGlobalProxy))
 
   readonly property bool busy: probeProcess.running || configReadProcess.running
     || actionProcess.running || modeProcess.running || proxySelectProcess.running
@@ -136,6 +147,7 @@ Item {
   readonly property bool copyingProxyExport: proxyExportProcess.running || clipboardProcess.running
 
   signal actionFinished(string kind, bool ok)
+  signal proxySelectionFinished(bool ok)
 
   function localPath(url) {
     var value = String(url || "")
@@ -213,15 +225,29 @@ Item {
     var wanted = String(name || "")
     if (wanted === "" || !canSwitchMode || proxySelectProcess.running) return
     pendingGlobalProxy = wanted
+    pendingProxyGroup = "GLOBAL"
     globalSelectionRequested = true
     lastError = ""
     proxySelectProcess.command = ClashApi.selectProxyCommand(apiBase, config.secret, "GLOBAL", wanted)
     proxySelectProcess.running = true
   }
 
+  function selectModeProxy(name) {
+    var wanted = String(name || "")
+    if (wanted === "" || currentProxyGroup === "" || !canSwitchMode || proxySelectProcess.running) return false
+    if (wanted === currentModeProxy) return false
+    pendingModeProxy = wanted
+    pendingProxyGroup = currentProxyGroup
+    lastError = ""
+    proxySelectProcess.command = ClashApi.selectProxyCommand(apiBase, config.secret, currentProxyGroup, wanted)
+    proxySelectProcess.running = true
+    return true
+  }
+
   function cancelGlobalSelection() {
     globalSelectionRequested = false
     pendingGlobalProxy = ""
+    if (pendingProxyGroup === "GLOBAL") pendingProxyGroup = ""
   }
 
   function toggleService() {
@@ -750,10 +776,13 @@ Item {
     onExited: function(exitCode) {
       var result = ClashApi.classify(exitCode, proxiesOut.text, proxiesErr.text)
       if (!result.ok) return
-      var parsed = ClashApi.parseGlobalProxies(result.body)
-      if (!parsed) return
-      root.globalProxyOptions = parsed.options
-      root.currentGlobalProxy = parsed.current
+      var globalGroup = ClashApi.parseProxyGroup(result.body, "GLOBAL")
+      var ruleGroup = ClashApi.parseProxyGroup(result.body, "PROXY")
+      if (!globalGroup || !ruleGroup) return
+      root.globalProxyOptions = globalGroup.options
+      root.currentGlobalProxy = globalGroup.current
+      root.ruleProxyOptions = ruleGroup.options
+      root.currentRuleProxy = ruleGroup.current
     }
   }
 
@@ -765,16 +794,28 @@ Item {
     stderr: StdioCollector { id: proxySelectErr; waitForEnd: true }
     onExited: function(exitCode) {
       var result = ClashApi.classify(exitCode, proxySelectOut.text, proxySelectErr.text)
+      var modeSelection = root.pendingModeProxy !== ""
       if (!result.ok) {
+        root.pendingModeProxy = ""
+        root.pendingProxyGroup = ""
         root.cancelGlobalSelection()
         root.reportError(result.message)
+        if (modeSelection) root.proxySelectionFinished(false)
         return
       }
       var selected = root.pendingGlobalProxy
+      var selectedGroup = root.pendingProxyGroup
       var activateGlobal = root.globalSelectionRequested
+      if (root.pendingModeProxy !== "") {
+        if (selectedGroup === "PROXY") root.currentRuleProxy = root.pendingModeProxy
+        else if (selectedGroup === "GLOBAL") root.currentGlobalProxy = root.pendingModeProxy
+      }
       if (selected !== "") root.currentGlobalProxy = selected
       root.pendingGlobalProxy = ""
+      root.pendingModeProxy = ""
+      root.pendingProxyGroup = ""
       root.globalSelectionRequested = false
+      if (modeSelection) root.proxySelectionFinished(true)
       if (activateGlobal && root.mode !== "global") root.setMode("global")
       else {
         if (activateGlobal) {

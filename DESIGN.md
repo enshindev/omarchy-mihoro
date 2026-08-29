@@ -132,6 +132,12 @@ A subscription URL is a bearer token — the whole of the authentication.
 - Where the panel and the CLI could disagree, the file on disk wins and the
   running core wins over both — the panel never shows a state nothing has
   confirmed.
+- The connection facts name the selectable node on its own `Proxy` label/value
+  row. In Rule mode that means the live `PROXY` selector; in Global mode it
+  means `GLOBAL`; Direct has no selector and says `DIRECT`. Editing expands the
+  row into a searchable picker, but choosing only stages a value: `Apply`
+  changes the running core and `Cancel` leaves it alone. Success returns to the
+  label/value row; failure leaves the editor open so the choice can be retried.
 
 ## Verification
 

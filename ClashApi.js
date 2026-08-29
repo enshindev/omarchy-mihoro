@@ -198,11 +198,11 @@ function parseConnections(body) {
   }
 }
 
-function parseGlobalProxies(body) {
+function parseProxyGroup(body, groupName) {
   var payload = parseJson(body)
   if (!payload) return null
   var proxies = payload.proxies
-  var group = proxies && typeof proxies === "object" ? proxies.GLOBAL : null
+  var group = proxies && typeof proxies === "object" ? proxies[String(groupName || "")] : null
   var all = group && group.all instanceof Array ? group.all : []
   var options = []
   for (var i = 0; i < all.length; i++) {
@@ -211,6 +211,8 @@ function parseGlobalProxies(body) {
   }
   return { current: group ? String(group.now || "") : "", options: options }
 }
+
+function parseGlobalProxies(body) { return parseProxyGroup(body, "GLOBAL") }
 
 // `Number(null)` is 0 and `Number("")` is 0, either of which would pass for a
 // counter that is simply absent. A missing field has to stay missing.

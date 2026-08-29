@@ -154,6 +154,20 @@ assert.strictEqual(global.options[2].label, "Singapore")
 assert.strictEqual(api.parseGlobalProxies('{"proxies":{}}').options.length, 0)
 assert.strictEqual(api.parseGlobalProxies("nope"), null)
 
+// The status page switches the group that actually serves the active mode:
+// PROXY for Rule, GLOBAL for Global. Parsing must not silently keep reading
+// GLOBAL when the panel asks for the Rule-mode selector.
+const ruleProxy = api.parseProxyGroup(JSON.stringify({
+  proxies: {
+    GLOBAL: { type: "Selector", now: "Singapore", all: ["Singapore"] },
+    PROXY: { type: "Selector", now: "Tokyo JP", all: ["DIRECT", "Tokyo JP"] }
+  }
+}), "PROXY")
+assert.strictEqual(ruleProxy.current, "Tokyo JP")
+assert.deepStrictEqual(Array.from(ruleProxy.options, option => option.value), ["DIRECT", "Tokyo JP"])
+assert.strictEqual(api.parseProxyGroup('{"proxies":{}}', "PROXY").options.length, 0)
+assert.strictEqual(api.parseProxyGroup("nope", "PROXY"), null)
+
 const sample = api.parseTrafficLine('{"up":120,"down":4096}')
 assert.strictEqual(sample.up, 120)
 assert.strictEqual(sample.down, 4096)
