@@ -97,6 +97,19 @@ If mihomo does not start, inspect its recent logs:
 journalctl --user -u mihomo.service -n 30 --no-pager
 ```
 
+## User agent
+
+Subscription downloads identify with `mihoro_user_agent` in `~/.config/mihoro.toml`
+— mihoro's own setting, `mihoro` by default. Both fetch paths use it: the CLI's
+`mihoro update --config` and the panel's enhanced update. If a provider hands
+out configs only to particular clients, set it there by hand. The value goes
+out as an HTTP header, so it has to be Latin-1 — a name written in Chinese
+falls back to `mihoro`, which is what mihoro's own fetch would send anyway:
+
+```toml
+mihoro_user_agent = "clash-verge/1.2"
+```
+
 ## Development
 
 ```bash
